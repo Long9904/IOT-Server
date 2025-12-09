@@ -26,8 +26,8 @@ client.on("connect", function () {
   // Gọi hàm lấy thời tiết ngay lập tức
   fetchWeatherAndPublish();
 
-  // Timer: 60s
-  setInterval(fetchWeatherAndPublish, 60 * 1000);
+  // Timer: 60s if not specified
+  setInterval(fetchWeatherAndPublish, process.env.WEATHER_TIME_DELAY || 60000);
 });
 
 client.on("error", function (error) {
