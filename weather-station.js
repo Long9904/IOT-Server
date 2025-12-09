@@ -1,15 +1,17 @@
+require("dotenv").config();
+
 const mqtt = require("mqtt");
 const axios = require("axios");
 
 // --- CẤU HÌNH ---
-// 1. Thông tin MQTT Broker (IP máy tính của bạn hoặc public)
+// 1. Thông tin MQTT Broker
 const MQTT_BROKER = process.env.MQTT_BROKER_HOST;
 const MQTT_TOPIC = "home/weather";
 
 // 2. Thông tin Thời tiết (OpenWeatherMap)
-const API_KEY = process.env.WEATHER_API_KEY; // <--- DÁN KEY CỦA BẠN VÀO ĐÂY
-const CITY = "Thu Duc"; // Tên thành phố bạn muốn xem
-const COUNTRY_CODE = "VN"; // Mã quốc gia
+const API_KEY = process.env.WEATHER_API_KEY;
+const CITY = "Thu Duc";
+const COUNTRY_CODE = "VN";
 
 // Tạo đường link gọi API
 const WEATHER_URL = `http://api.openweathermap.org/data/2.5/weather?q=${CITY},${COUNTRY_CODE}&appid=${API_KEY}&units=metric&lang=vi`;
@@ -19,17 +21,17 @@ console.log(`📡 Đang kết nối tới Broker: ${MQTT_BROKER}...`);
 const client = mqtt.connect(MQTT_BROKER);
 
 client.on("connect", function () {
-  console.log("✅ Đã kết nối MQTT thành công!");
+  console.log("Đã kết nối MQTT thành công!");
 
   // Gọi hàm lấy thời tiết ngay lập tức
   fetchWeatherAndPublish();
 
-  // Cài đặt lặp lại: Cứ 10 giây cập nhật một lần
-  setInterval(fetchWeatherAndPublish, 10000);
+  // Timer: 60s
+  setInterval(fetchWeatherAndPublish, 60 * 1000);
 });
 
 client.on("error", function (error) {
-  console.log("❌ Lỗi kết nối MQTT:", error);
+  console.log("Lỗi kết nối MQTT:", error);
 });
 
 // --- HÀM XỬ LÝ CHÍNH ---
@@ -55,13 +57,14 @@ async function fetchWeatherAndPublish() {
     console.log(`☁️ Tình trạng: ${weatherInfo.desc}`);
 
     // 4. Gửi xuống MQTT (Publish)
-    // Phải chuyển Object thành chuỗi JSON trước khi gửi
+    // Convert to JSON string
     const payload = JSON.stringify(weatherInfo);
     client.publish(MQTT_TOPIC, payload);
-    console.log(`📤 Đã gửi dữ liệu xuống topic: ${MQTT_TOPIC}`);
+
+    console.log(`Đã gửi dữ liệu xuống topic: ${MQTT_TOPIC}`);
   } catch (error) {
     console.error(
-      "⚠️ Lỗi khi lấy thời tiết:",
+      "Lỗi khi lấy thời tiết:",
       error.response ? error.response.statusText : error.message
     );
     console.log("Gợi ý: Kiểm tra lại API KEY xem đúng chưa?");
