@@ -20,7 +20,7 @@ client.on("connect", function () {
   console.log("MQTT connected successfully!");
 
   // Register subcribe to topic for location updates
-  client.subscribe("home/weather/location");
+  client.subscribe("home/location");
 
   // Initial fetch and publish
   fetchWeatherAndPublish();

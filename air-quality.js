@@ -19,7 +19,7 @@ client.on("connect", function () {
   console.log("MQTT connected successfully!");
 
   // Register subcribe to topic for location updates
-  client.subscribe("home/weather/location");
+  client.subscribe("home/location");
 
   // Initial fetch and publish
   getAirQuality(CITY);
@@ -77,6 +77,7 @@ async function getAirQuality(city) {
     console.log(CITY);
     console.log("AQI Level:", info.main.aqi);
     console.log("Components:", info.components);
+    console.log("Data publish on topic" + MQTT_TOPIC);
   } catch (err) {
     console.log("Error:", err.message);
   }
