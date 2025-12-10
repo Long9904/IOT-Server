@@ -1,23 +1,34 @@
 require("dotenv").config();
 const aedes = require("aedes")();
-const server = require("net").createServer(aedes.handle);
-const port = process.env.MQTT_BROKER_PORT;
+const net = require("net");
+const ws = require("ws");
+const websocketStream = require("websocket-stream");
 
-// Start MQTT Broker server
-server.listen(port, function () {
-  console.log("MQTT Broker (server.js) is running on port:", port);
+const MQTT_PORT = process.env.MQTT_BROKER_PORT || 1883;
+const WS_PORT = process.env.MQTT_WS_PORT || 8888;
+
+// MQTT (TCP)
+const mqttServer = net.createServer(aedes.handle);
+mqttServer.listen(MQTT_PORT, () => {
+  console.log("MQTT Broker running on TCP port:", MQTT_PORT);
 });
 
-// When a device connects
-aedes.on("client", function (client) {
-  console.log(`[CONNECT] New device: ${client ? client.id : client}`);
+// MQTT over WebSocket
+const wsServer = new ws.Server({ port: WS_PORT });
+wsServer.on("connection", function (socket) {
+  websocketStream(socket).pipe(aedes.createStream()).pipe(socket);
 });
 
-// When a message is published- take message payload from publish event
-aedes.on("publish", function (packet, client) {
+console.log("MQTT WebSocket running on port:", WS_PORT);
+
+// Log client connections
+aedes.on("client", (client) => {
+  console.log(`[CONNECT] Device: ${client?.id}`);
+});
+
+// Log published messages
+aedes.on("publish", (packet, client) => {
   if (client) {
-    console.log(
-      `📩 Received message from [${client.id}]: ${packet.payload.toString()}`
-    );
+    console.log(`${client.id} → ${packet.topic}: ${packet.payload.toString()}`);
   }
 });
