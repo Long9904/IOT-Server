@@ -12,7 +12,7 @@ const API_KEY = process.env.WEATHER_API_KEY;
 var CITY = "Thu Duc";
 const COUNTRY_CODE = "VN";
 
-console.log(`Connecting to MQTT Broker: ${MQTT_BROKER}...`);
+console.log(`Weather Station is connecting to MQTT Broker: ${MQTT_BROKER}...`);
 const client = mqtt.connect(MQTT_BROKER);
 
 // When connected to MQTT Broker
@@ -31,12 +31,12 @@ client.on("connect", function () {
 
 // Error handling
 client.on("error", function (error) {
-  console.log("MQTT connection error  :", error);
+  console.log("Weather Station & MQTT connection error  :", error);
 });
 
 // Update location function
 client.on("message", function (topic, message) {
-  if (topic === "home/weather/location") {
+  if (topic === "home/location") {
     const newCity = message.toString();
     console.log(`Updating location to: ${newCity}`);
     CITY = newCity;
