@@ -3,70 +3,79 @@ require("dotenv").config();
 const mqtt = require("mqtt");
 const axios = require("axios");
 
-// --- CẤU HÌNH ---
-// 1. Thông tin MQTT Broker
+// 1. Setting MQTT Broker
 const MQTT_BROKER = process.env.MQTT_BROKER_HOST;
 const MQTT_TOPIC = "home/weather";
 
-// 2. Thông tin Thời tiết (OpenWeatherMap)
+// 2. Weather Information (OpenWeatherMap)
 const API_KEY = process.env.WEATHER_API_KEY;
-const CITY = "Thu Duc";
+var CITY = "Thu Duc";
 const COUNTRY_CODE = "VN";
 
-// Tạo đường link gọi API
-const WEATHER_URL = `http://api.openweathermap.org/data/2.5/weather?q=${CITY},${COUNTRY_CODE}&appid=${API_KEY}&units=metric&lang=vi`;
-
-// --- KẾT NỐI ---
-console.log(`📡 Đang kết nối tới Broker: ${MQTT_BROKER}...`);
+console.log(`Connecting to MQTT Broker: ${MQTT_BROKER}...`);
 const client = mqtt.connect(MQTT_BROKER);
 
+// When connected to MQTT Broker
 client.on("connect", function () {
-  console.log("Đã kết nối MQTT thành công!");
+  console.log("MQTT connected successfully!");
 
-  // Gọi hàm lấy thời tiết ngay lập tức
+  // Register subcribe to topic for location updates
+  client.subscribe("home/weather/location");
+
+  // Initial fetch and publish
   fetchWeatherAndPublish();
 
   // Timer: 60s if not specified
   setInterval(fetchWeatherAndPublish, process.env.WEATHER_TIME_DELAY || 60000);
 });
 
+// Error handling
 client.on("error", function (error) {
-  console.log("Lỗi kết nối MQTT:", error);
+  console.log("MQTT connection error  :", error);
 });
 
-// --- HÀM XỬ LÝ CHÍNH ---
+// Update location function
+client.on("message", function (topic, message) {
+  if (topic === "home/weather/location") {
+    const newCity = message.toString();
+    console.log(`Updating location to: ${newCity}`);
+    CITY = newCity;
+  }
+});
+
 async function fetchWeatherAndPublish() {
   try {
-    // 1. Gọi API lấy thời tiết
+    const WEATHER_URL = `https://api.openweathermap.org/data/2.5/weather?q=${CITY},${COUNTRY_CODE}&appid=${API_KEY}&units=metric`;
+    // 1. Call API to get weather data
     const response = await axios.get(WEATHER_URL);
     const data = response.data;
 
-    // 2. Lọc lấy thông tin cần thiết
+    // 2. Filter necessary information
     const weatherInfo = {
       city: data.name,
-      temp: data.main.temp, // Nhiệt độ
-      humidity: data.main.humidity, // Độ ẩm
-      desc: data.weather[0].description, // Mô tả (vd: mây cụm, mưa nhẹ)
+      temp: data.main.temp, // Temperature
+      humidity: data.main.humidity, // Humidity
+      desc: data.weather[0].description, // Description (e.g., scattered clouds, light rain)
     };
 
-    // 3. In ra màn hình console (Server)
+    // 3. Print to console (Server)
     console.log("-----------------------------");
-    console.log(`📍 Tại: ${weatherInfo.city}`);
-    console.log(`🌡️ Nhiệt độ: ${weatherInfo.temp}°C`);
-    console.log(`💧 Độ ẩm: ${weatherInfo.humidity}%`);
-    console.log(`☁️ Tình trạng: ${weatherInfo.desc}`);
+    console.log(`Location: ${weatherInfo.city}`);
+    console.log(`Temperature: ${weatherInfo.temp}°C`);
+    console.log(`Humidity: ${weatherInfo.humidity}%`);
+    console.log(`Condition: ${weatherInfo.desc}`);
 
-    // 4. Gửi xuống MQTT (Publish)
+    // 4. Publish to MQTT Broker
     // Convert to JSON string
     const payload = JSON.stringify(weatherInfo);
     client.publish(MQTT_TOPIC, payload);
 
-    console.log(`Đã gửi dữ liệu xuống topic: ${MQTT_TOPIC}`);
+    console.log(`Data published to topic: ${MQTT_TOPIC}`);
   } catch (error) {
     console.error(
-      "Lỗi khi lấy thời tiết:",
+      "Error fetching weather data:",
       error.response ? error.response.statusText : error.message
     );
-    console.log("Gợi ý: Kiểm tra lại API KEY xem đúng chưa?");
+    console.log("Hint: Check if the API KEY is correct.");
   }
 }
