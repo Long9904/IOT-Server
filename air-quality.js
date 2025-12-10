@@ -5,7 +5,7 @@ const axios = require("axios");
 
 // 1. Setting MQTT Broker
 const MQTT_BROKER = process.env.MQTT_BROKER_HOST;
-const MQTT_TOPIC = "home/air-quality";
+const MQTT_TOPIC = "out/air-quality";
 
 const API_KEY = process.env.WEATHER_API_KEY;
 var CITY = "Thu Duc";
