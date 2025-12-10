@@ -45,7 +45,7 @@ client.on("message", function (topic, message) {
 
 async function fetchWeatherAndPublish() {
   try {
-    const WEATHER_URL = `https://api.openweathermap.org/data/2.5/weather?q=${CITY},${COUNTRY_CODE}&appid=${API_KEY}&units=metric`;
+    const WEATHER_URL = `https://api.openweathermap.org/data/2.5/weather?q=${CITY},${COUNTRY_CODE}&appid=${API_KEY}&units=metric&lang=vi`;
     // 1. Call API to get weather data
     const response = await axios.get(WEATHER_URL);
     const data = response.data;
