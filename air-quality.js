@@ -66,7 +66,10 @@ async function getAirQuality(city) {
     const payload = {
       city: city,
       aqi: info.main.aqi,
-      components: info.components,
+      co: info.components.co,
+      pm2_5: info.components.pm2_5,
+      pm10: info.components.pm10,
+      no: info.components.no,
     };
 
     // Publish to MQTT Broker
