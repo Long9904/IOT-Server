@@ -22,11 +22,11 @@ client.on("connect", function () {
   client.subscribe("home/location");
 
   // Initial fetch and publish
-  getAirQuality(CITY);
+  fetchAirQualityAndPublish(CITY);
 
   // Timer: 60s if not specified
   setInterval(
-    () => getAirQuality(CITY),
+    () => fetchAirQualityAndPublish(CITY),
     process.env.AIR_QUALITY_DELAY || 60000
   );
 });
@@ -42,10 +42,11 @@ client.on("message", function (topic, message) {
     const newCity = message.toString();
     console.log(`Updating location to: ${newCity}`);
     CITY = newCity;
+    fetchAirQualityAndPublish(CITY);
   }
 });
 
-async function getAirQuality(city) {
+async function fetchAirQualityAndPublish(city) {
   try {
     // 1. Get coordinates
     const geoURL = `http://api.openweathermap.org/geo/1.0/direct?q=${city},VN&limit=1&appid=${API_KEY}`;

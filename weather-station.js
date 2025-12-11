@@ -40,6 +40,7 @@ client.on("message", function (topic, message) {
     const newCity = message.toString();
     console.log(`Updating location to: ${newCity}`);
     CITY = newCity;
+    fetchWeatherAndPublish();
   }
 });
 
