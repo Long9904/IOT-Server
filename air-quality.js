@@ -60,7 +60,7 @@ async function fetchAirQualityAndPublish(city) {
     const { lat, lon } = geoRes.data[0];
 
     // 2. Air pollution API
-    const airURL = `http://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}&lang=vi`;
+    const airURL = `http://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}&lang=en`;
     const airRes = await axios.get(airURL);
 
     const info = airRes.data.list[0];
