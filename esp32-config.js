@@ -1,84 +1,92 @@
 require("dotenv").config();
-
 const mqtt = require("mqtt");
 
-// MQTT Broker Configuration
+// ===== MQTT CONFIG =====
 const MQTT_BROKER = process.env.MQTT_BROKER_HOST;
 const TELEMETRY_TOPIC = "iot/esp32/telemetry";
 const LOCATION_TOPIC = "home/location";
 const TIME_TOPIC = "set/clock";
 
-console.log(`Time Server is connecting to MQTT Broker: ${MQTT_BROKER}...`);
+console.log(`Time Server connecting to MQTT Broker: ${MQTT_BROKER}`);
 const client = mqtt.connect(MQTT_BROKER);
 
-// When connected to MQTT Broker
-client.on("connect", function () {
+// ===== MQTT CONNECT =====
+client.on("connect", () => {
   console.log("MQTT connected successfully!");
 
-  // Subscribe to ESP32 telemetry topic
-  client.subscribe(TELEMETRY_TOPIC, function (err) {
+  client.subscribe(TELEMETRY_TOPIC, (err) => {
     if (!err) {
-      console.log(`Subscribed to topic: ${TELEMETRY_TOPIC}`);
+      console.log(`Subscribed to ${TELEMETRY_TOPIC}`);
     } else {
-      console.error("Subscription error:", err);
+      console.error("Subscribe error:", err);
     }
   });
 });
 
-// Error handling
-client.on("error", function (error) {
-  console.log("MQTT connection error:", error);
+// ===== ERROR =====
+client.on("error", (error) => {
+  console.error("MQTT error:", error);
 });
 
-// Handle incoming messages
-client.on("message", function (topic, message) {
-  if (topic === TELEMETRY_TOPIC) {
-    try {
-      // Parse JSON message from ESP32
-      const data = JSON.parse(message.toString());
-      console.log("-----------------------------");
-      console.log("Received telemetry from ESP32:");
-      console.log(`Timezone: ${data.timezone}`);
-      console.log(`Location: ${data.location}`);
+// ===== RECEIVE DATA =====
+client.on("message", (topic, message) => {
+  if (topic !== TELEMETRY_TOPIC) return;
 
-      // 1. Publish location to home/location topic
-      if (data.location) {
-        client.publish(LOCATION_TOPIC, data.location);
-        console.log(
-          `Published location to ${LOCATION_TOPIC}: ${data.location}`
-        );
-      }
+  try {
+    const raw = message.toString();
+    console.log("\nRAW telemetry:", raw);
 
-      // 2. Calculate and publish time based on timezone offset
-      if (data.timezone !== undefined) {
-        const timeData = calculateTimeFromOffset(data.timezone);
-        const timePayload = JSON.stringify(timeData);
+    const data = JSON.parse(raw);
+    console.log("Parsed telemetry:", data);
 
-        client.publish(TIME_TOPIC, timePayload);
-        console.log(`Published time to ${TIME_TOPIC}:`, timeData);
-      }
-    } catch (error) {
-      console.error("Error parsing telemetry message:", error.message);
+    // ===== LOCATION =====
+    if (typeof data.location === "string" && data.location !== "NA") {
+      client.publish(LOCATION_TOPIC, data.location);
+      console.log(`Published location: ${data.location}`);
     }
+
+    // ===== TIMEZONE =====
+    const offset = parseUtcOffset(data.timezone);
+
+    if (offset !== null) {
+      const timeData = calculateTimeFromOffset(offset);
+      client.publish(TIME_TOPIC, JSON.stringify(timeData));
+      console.log("Published time:", timeData);
+    } else {
+      console.warn("Invalid timezone format:", data.timezone);
+    }
+  } catch (err) {
+    console.error("JSON parse error:", err.message);
   }
 });
 
-/**
- * Calculate current time based on UTC offset
- * @param {number} utcOffset - UTC offset in hours (e.g., 7 for UTC+7)
- * @returns {object} Time data object with year, month, day, hour, minute, second, utcOffset
- */
+// ===== PARSE UTC STRING =====
+function parseUtcOffset(utcString) {
+  if (typeof utcString !== "string") return null;
+
+  // Match: UTC+07, UTC-5, UTC+07 Vietnam
+  const match = utcString.match(/UTC\s*([+-])\s*(\d{1,2})/i);
+  if (!match) return null;
+
+  const sign = match[1] === "-" ? -1 : 1;
+  const hours = parseInt(match[2], 10);
+
+  if (hours > 14) return null; // safety
+
+  return sign * hours;
+}
+
+// ===== CALCULATE TIME =====
 function calculateTimeFromOffset(utcOffset) {
-  // Get current UTC time
   const now = new Date();
 
-  // Calculate time with offset
+  // UTC time
   const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-  const localTime = new Date(utcTime + 3600000 * utcOffset);
+  const localTime = new Date(utcTime + utcOffset * 3600000);
 
   return {
     year: localTime.getFullYear(),
-    month: localTime.getMonth() + 1, // JavaScript months are 0-indexed
+    month: localTime.getMonth() + 1,
     day: localTime.getDate(),
     hour: localTime.getHours(),
     minute: localTime.getMinutes(),
@@ -87,9 +95,9 @@ function calculateTimeFromOffset(utcOffset) {
   };
 }
 
-// Graceful shutdown
-process.on("SIGINT", function () {
-  console.log("\nShutting down gracefully...");
+// ===== GRACEFUL SHUTDOWN =====
+process.on("SIGINT", () => {
+  console.log("\nShutting down...");
   client.end();
   process.exit();
 });
